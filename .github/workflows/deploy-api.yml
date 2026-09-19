@@ -43,5 +43,7 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --stack-name meetup-planner-api \
+            --resolve-s3 \
             --resolve-image-repos \
+            --capabilities CAPABILITY_IAM \
             --parameter-overrides "${PARAMS[@]}"
