@@ -7,6 +7,7 @@ on:
     paths:
       - "backend/**"
       - "template.yaml"
+      - ".github/workflows/deploy-api.yml"
 
 permissions:
   id-token: write
@@ -17,30 +18,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Debug OIDC claims
-        run: |
-          set -euo pipefail
-          echo "Role ARN secret length: ${#AWS_ROLE_ARN}"
-          echo "Role ARN starts with: ${AWS_ROLE_ARN:0:20}"
-          echo "Role ARN ends with: ${AWS_ROLE_ARN: -30}"
-          TOKEN=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
-          PAD=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
-          PAYLOAD="${PAYLOAD}$(printf '=%.0s' $(seq 1 $PAD))"
-          echo "$PAYLOAD" | base64 -d | python3 -m json.tool
-        env:
-          AWS_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
       - uses: aws-actions/setup-sam@v2
       - run: sam build
-      - run: >-
-          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
-          --stack-name meetup-planner-api --resolve-image-repos
-          --parameter-overrides
-          DatabaseUrl='${{ secrets.DATABASE_URL }}'
-          JwtSecret='${{ secrets.JWT_SECRET }}'
-          OpenAiApiKey='${{ secrets.OPENAI_API_KEY }}'
+      - name: Deploy SAM stack
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          PARAMS=(
+            "DatabaseUrl=${DATABASE_URL}"
+            "JwtSecret=${JWT_SECRET}"
+          )
+          # SAM rejects empty Key= values; template default is "" when omitted.
+          if [ -n "${OPENAI_API_KEY:-}" ]; then
+            PARAMS+=("OpenAiApiKey=${OPENAI_API_KEY}")
+          fi
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --stack-name meetup-planner-api \
+            --resolve-image-repos \
+            --parameter-overrides "${PARAMS[@]}"
