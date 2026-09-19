@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+PyJWT
+pwdlib[argon2]
+python-multipart
+openai
+mangum
+pytest
+httpx

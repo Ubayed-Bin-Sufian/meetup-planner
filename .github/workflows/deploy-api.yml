@@ -1,0 +1,32 @@
+name: Deploy API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "template.yaml"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/setup-sam@v2
+      - run: sam build
+      - run: >-
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+          --stack-name meetup-planner-api --resolve-image-repos
+          --parameter-overrides
+          DatabaseUrl='${{ secrets.DATABASE_URL }}'
+          JwtSecret='${{ secrets.JWT_SECRET }}'
+          OpenAiApiKey='${{ secrets.OPENAI_API_KEY }}'

@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Meetup Planner FastAPI service
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+  JwtSecret:
+    Type: String
+    NoEcho: true
+  OpenAiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+Resources:
+  MeetupApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrl
+          JWT_SECRET: !Ref JwtSecret
+          OPENAI_API_KEY: !Ref OpenAiApiKey
+      Events:
+        HttpApi:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      DockerTag: meetup-api
+      DockerContext: ./backend
+      Dockerfile: Dockerfile
+
+Outputs:
+  ApiUrl:
+    Description: FastAPI endpoint
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
