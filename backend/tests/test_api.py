@@ -102,3 +102,21 @@ def test_agenda_generation_requires_configuration(monkeypatch: pytest.MonkeyPatc
     )
     assert response.status_code == 503
     assert response.json()["detail"] == "Agenda generation is not configured"
+
+
+def test_agenda_generation_returns_draft(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    def fake_generate_agenda(title: str, audience: str, duration_minutes: int) -> str:
+        return f"Welcome\nTalk: {title}\nAudience: {audience}\nLength: {duration_minutes}m"
+
+    monkeypatch.setattr("app.main.generate_agenda", fake_generate_agenda)
+    response = client.post(
+        "/agenda/draft",
+        json={"title": "AI for Dhaka", "audience": "Developers", "duration_minutes": 120},
+        headers=auth_headers(),
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "agenda": "Welcome\nTalk: AI for Dhaka\nAudience: Developers\nLength: 120m"
+    }
