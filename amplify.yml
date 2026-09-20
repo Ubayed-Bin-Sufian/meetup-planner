@@ -3,9 +3,13 @@ frontend:
   phases:
     preBuild:
       commands:
+        - nvm install 24
+        - nvm use 24
+        - node -v
         - npm install --prefix frontend
     build:
       commands:
+        - nvm use 24
         - npm run build --prefix frontend
   artifacts:
     baseDirectory: frontend/dist
